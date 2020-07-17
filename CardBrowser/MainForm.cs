@@ -354,14 +354,38 @@ namespace CardBrowser
                     applicationIdentifiers.Add(Helpers.HexStringToBytes("A0000000043060"));     // Maestro
                     applicationIdentifiers.Add(Helpers.HexStringToBytes("A0000000050001"));     // Maestro UK
                     applicationIdentifiers.Add(Helpers.HexStringToBytes("A00000002401"));       // Self Service
+
                     applicationIdentifiers.Add(Helpers.HexStringToBytes("A000000025"));         // American Express
                     applicationIdentifiers.Add(Helpers.HexStringToBytes("A000000025010104"));   // American Express
                     applicationIdentifiers.Add(Helpers.HexStringToBytes("A000000025010701"));   // ExpressPay
+
                     applicationIdentifiers.Add(Helpers.HexStringToBytes("A0000000291010"));     // Link
 
                     applicationIdentifiers.Add(Helpers.HexStringToBytes("B012345678"));         // Maestro TEST
 
+                    
                     applicationIdentifiers.Add(Helpers.HexStringToBytes("A0000000651010"));     // JCB
+
+                    applicationIdentifiers.Add(Helpers.HexStringToBytes("A0000001410001"));     // PagoBANCOMAT
+                    applicationIdentifiers.Add(Helpers.HexStringToBytes("A0000001524010"));     // DPAS
+                    applicationIdentifiers.Add(Helpers.HexStringToBytes("A0000002771010"));     // Interac
+                    
+
+
+
+                    // KLSC D4100000011010 / D4100000012010 / D4100000014010
+                    applicationIdentifiers.Add(Helpers.HexStringToBytes("A000000003000000"));   // KONA RID
+                    
+                    
+                    applicationIdentifiers.Add(Helpers.HexStringToBytes("D410000001"));         // KLSC RID
+                    applicationIdentifiers.Add(Helpers.HexStringToBytes("D4100000011010"));     // VSDC base RID
+                    applicationIdentifiers.Add(Helpers.HexStringToBytes("D4100000012010"));     // MCHIP base RID
+                    applicationIdentifiers.Add(Helpers.HexStringToBytes("D4100000014010"));     // justouch
+
+                    // KONA android xml
+                    //A0000002514025260010
+                    applicationIdentifiers.Add(Helpers.HexStringToBytes("A000000251"));          // KONA RID
+                    applicationIdentifiers.Add(Helpers.HexStringToBytes("A0000002514025260010"));// KONA Pay app
                 }
 
                 // Now lets process all of the AID's we found
@@ -412,7 +436,9 @@ namespace CardBrowser
                             AddRecordNodes(fci, fciNode);
 
                             // Get processing options (with empty PDOL)
-                            apdu = new APDUCommand(0x80, 0xA8, 0x00, 0x00, new byte[] { 0x83, 0x00 }, 0x02);
+                            //apdu = new APDUCommand(0x80, 0xA8, 0x00, 0x00, new byte[] { 0x83, 0x00 }, 0x02);
+
+                            apdu = new APDUCommand(0x80, 0xA8, 0x00, 0x00, new byte[] { 0x83, 0x02, 0x04, 0x10 }, 0x02);
                             response = cardReader.Transmit(apdu);
 
                             // Get response nescesary
