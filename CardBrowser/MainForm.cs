@@ -79,7 +79,7 @@ namespace CardBrowser
             UpdateStatusLabel("Card removed from reader: " + reader);
             ClearTreeView();
         }
-
+        
         void cardReader_CardInserted(string reader, byte[] atr)
         {
             StringBuilder sb = new StringBuilder();
@@ -92,12 +92,36 @@ namespace CardBrowser
             UpdateStatusLabel("Card inserted in reader: " + reader);
         }
 
+
+        private string GetTagName(string tag)
+        {
+            XElement tagElement = tagsDocument.Descendants().Where(el => el.Attributes().Any(a => a.Name == "Tag" && a.Value == tag)).FirstOrDefault();
+
+
+            if (tagElement != null)
+            {
+                 return tagElement.Attribute("Description").Value;
+            }
+            else
+            {
+                return "";
+            }
+        }
+
         private void AddRecordNodes(ASN1 asn, TreeNode parentNode)
         {
             StringBuilder sb = new StringBuilder();
             foreach (byte b in asn.Tag)
             {
                 sb.AppendFormat("{0:X2}", b);
+            }
+            string tag = sb.ToString();
+            string name = GetTagName(tag);
+
+            if (name.Length != 0)
+            {
+                sb.Append(": ");
+                sb.Append(name);
             }
 
             TreeNode node = new TreeNode(sb.ToString());
@@ -131,18 +155,18 @@ namespace CardBrowser
                 }
 
                 // Get tag description
-                XElement tagElement = tagsDocument.Descendants().Where(el => el.Attributes().Any(a => a.Name == "Tag" && a.Value == sb.ToString())).FirstOrDefault();
+                //XElement tagElement = tagsDocument.Descendants().Where(el => el.Attributes().Any(a => a.Name == "Tag" && a.Value == sb.ToString())).FirstOrDefault();
+                //if (tagElement != null)
+                //{
+                //    lblDescription.Text = tagElement.Attribute("Description").Value;
+                //}
+                //else
+                //{
+                //    lblDescription.Text = "None";
+                //}
 
                 lblTag.Text = sb.ToString();
-
-                if (tagElement != null)
-                {
-                    lblDescription.Text = tagElement.Attribute("Description").Value;
-                }
-                else
-                {
-                    lblDescription.Text = "None";
-                }
+                lblDescription.Text = GetTagName(sb.ToString());
 
                 sb = new StringBuilder();
 
