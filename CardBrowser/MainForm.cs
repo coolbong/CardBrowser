@@ -299,7 +299,12 @@ namespace CardBrowser
                             fci = new ASN1(response.Data);
                             AddRecordNodes(fci, fciNode);
 
-                            byte sfi = new ASN1(response.Data).Find(0x88).Value[0];
+                            ASN1 asn = new ASN1(response.Data).Find(0x88);
+                            byte sfi = 1;
+                            if (asn != null)
+                            {
+                                sfi = asn.Value[0];
+                            }
                             byte recordNumber = 0x01;
                             byte p2 = (byte)((sfi << 3) | 4);
 
@@ -308,6 +313,18 @@ namespace CardBrowser
                             efDirNode.SelectedImageIndex = 2;
                             efDirNode.Tag = sfi;
                             pseNode.Nodes.Add(efDirNode);
+
+                            //ASN1 asn_a5 = new ASN1(response.Data).Find(0xA5);
+                            ASN1 asn_bf0c = new ASN1(response.Data).Find(new byte[] { 0xBF, 0x0C });
+
+                            foreach (ASN1 appTemplate in asn_bf0c)
+                            {
+                                // Check we really have an Application Template
+                                if (appTemplate.Tag[0] == 0x61)
+                                {
+                                    applicationIdentifiers.Add(appTemplate.Find(0x4f).Value);
+                                }
+                            }
 
 
                             while (response.SW1 != 0x6A && response.SW2 != 0x83)
@@ -398,9 +415,6 @@ namespace CardBrowser
 
 
                     // KLSC D4100000011010 / D4100000012010 / D4100000014010
-                    applicationIdentifiers.Add(Helpers.HexStringToBytes("A000000003000000"));   // KONA RID
-                    
-                    
                     applicationIdentifiers.Add(Helpers.HexStringToBytes("D410000001"));         // KLSC RID
                     applicationIdentifiers.Add(Helpers.HexStringToBytes("D4100000011010"));     // VSDC base RID
                     applicationIdentifiers.Add(Helpers.HexStringToBytes("D4100000012010"));     // MCHIP base RID
@@ -458,6 +472,14 @@ namespace CardBrowser
 
                             fci = new ASN1(response.Data);
                             AddRecordNodes(fci, fciNode);
+
+                            // find PDOL
+                            ASN1 pdol = fci.Find(new byte[] { 0x9F, 0x38 });
+                            //byte sfi = 1;
+                            //if (asn != null)
+                            //{
+                            //    sfi = asn.Value[0];
+                            //}
 
                             // Get processing options (with empty PDOL)
                             //apdu = new APDUCommand(0x80, 0xA8, 0x00, 0x00, new byte[] { 0x83, 0x00 }, 0x02);

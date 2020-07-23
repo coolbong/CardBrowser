@@ -54,13 +54,13 @@ namespace CardBrowser
             try
             {
                 // Check if a new version is availale
-                bool newVersion = CheckForNewVersion();
+                //bool newVersion = CheckForNewVersion();
 
                 // Inform about the status and ask to download the newest version
                 // Invoke the request on the Owners GUI thread
                 Control c = owner as Control;
-                bool download = (bool)c.Invoke(new CheckCompleteDelegate(OnCheckComplete), new object[] { newVersion });
-
+                //bool download = (bool)c.Invoke(new CheckCompleteDelegate(OnCheckComplete), new object[] { newVersion });
+                bool download = false;
                 if (!download)
                 {
                     return;
