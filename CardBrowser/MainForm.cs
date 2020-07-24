@@ -25,6 +25,7 @@ namespace CardBrowser
         private PCSCReader cardReader;
         private Thread readThread = null;
         private XDocument tagsDocument = null;
+        private XDocument preDefinedDocument = null;
 
         // For cross-thread opertions
         private delegate void UpdateTreeViewDelegate(TreeView treeView);
@@ -39,10 +40,15 @@ namespace CardBrowser
 
             Assembly a = Assembly.GetExecutingAssembly();
             string[] resourceNames = a.GetManifestResourceNames();
-            Stream stream = a.GetManifestResourceStream("CardBrowser.TagList.xml");
 
+            Stream stream = a.GetManifestResourceStream("CardBrowser.TagList.xml");
             XmlTextReader reader = new XmlTextReader(stream);
             tagsDocument = XDocument.Load(reader);
+
+
+            Stream stream2 = a.GetManifestResourceStream("CardBrowser.PredefinedDataList.xml");
+            XmlTextReader reader2 = new XmlTextReader(stream2);
+            preDefinedDocument = XDocument.Load(reader2);
 
             lblTag.Text = String.Empty;
             lblDescription.Text = String.Empty;
@@ -107,6 +113,30 @@ namespace CardBrowser
                 return "";
             }
         }
+
+        public void SetPredefinedValue(Tl tl)
+        {
+            string tag = tl.Tag;
+            int length = tl.Length;
+
+            XElement tagElement = preDefinedDocument.Descendants().Where(el => el.Attributes().Any(a => a.Name == "Tag" && a.Value == tag)).FirstOrDefault();
+
+
+            if (tagElement != null)
+            {
+                tl.Value = tagElement.Attribute("Value").Value;
+            }
+            else
+            {
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < length; i++)
+                {
+                    sb.Append("00");
+                }
+                tl.Value = sb.ToString();
+            }
+        }
+
 
         private void AddRecordNodes(ASN1 asn, TreeNode parentNode)
         {
@@ -272,6 +302,12 @@ namespace CardBrowser
                         apdu = new APDUCommand(0x00, 0xA4, 0x04, 0x00, pse, (byte)pse.Length);
                         response = cardReader.Transmit(apdu);
 
+                        bool IsPse = true;
+
+                        if (Hex.ToAscii(pse) == "2PAY.SYS.DDF01") {
+                            IsPse = false;
+                        }
+
                         // Get response nescesary
                         if (response.SW1 == 0x61)
                         {
@@ -299,64 +335,73 @@ namespace CardBrowser
                             fci = new ASN1(response.Data);
                             AddRecordNodes(fci, fciNode);
 
-                            ASN1 asn = new ASN1(response.Data).Find(0x88);
-                            byte sfi = 1;
-                            if (asn != null)
+                            if (IsPse)
                             {
-                                sfi = asn.Value[0];
-                            }
-                            byte recordNumber = 0x01;
-                            byte p2 = (byte)((sfi << 3) | 4);
-
-                            TreeNode efDirNode = new TreeNode(String.Format("EF Directory - {0:X2}", sfi));
-                            efDirNode.ImageIndex = 2;
-                            efDirNode.SelectedImageIndex = 2;
-                            efDirNode.Tag = sfi;
-                            pseNode.Nodes.Add(efDirNode);
-
-                            //ASN1 asn_a5 = new ASN1(response.Data).Find(0xA5);
-                            ASN1 asn_bf0c = new ASN1(response.Data).Find(new byte[] { 0xBF, 0x0C });
-
-                            foreach (ASN1 appTemplate in asn_bf0c)
-                            {
-                                // Check we really have an Application Template
-                                if (appTemplate.Tag[0] == 0x61)
+                                ASN1 asn = new ASN1(response.Data).Find(0x88);
+                                byte sfi = 1;
+                                if (asn != null)
                                 {
-                                    applicationIdentifiers.Add(appTemplate.Find(0x4f).Value);
+                                    sfi = asn.Value[0];
                                 }
-                            }
+                                byte recordNumber = 0x01;
+                                byte p2 = (byte)((sfi << 3) | 4);
 
+                                TreeNode efDirNode = new TreeNode(String.Format("EF Directory - {0:X2}", sfi));
+                                efDirNode.ImageIndex = 2;
+                                efDirNode.SelectedImageIndex = 2;
+                                efDirNode.Tag = sfi;
+                                pseNode.Nodes.Add(efDirNode);
 
-                            while (response.SW1 != 0x6A && response.SW2 != 0x83)
-                            {
-                                apdu = new APDUCommand(0x00, 0xB2, recordNumber, p2, null, 0x00);
-                                response = cardReader.Transmit(apdu);
-
-                                // Retry with correct length
-                                if (response.SW1 == 0x6C)
+                                while (response.SW1 != 0x6A && response.SW2 != 0x83)
                                 {
-                                    apdu = new APDUCommand(0x00, 0xB2, recordNumber, p2, null, response.SW2);
+                                    apdu = new APDUCommand(0x00, 0xB2, recordNumber, p2, null, 0x00);
                                     response = cardReader.Transmit(apdu);
+
+                                    // Retry with correct length
+                                    if (response.SW1 == 0x6C)
+                                    {
+                                        apdu = new APDUCommand(0x00, 0xB2, recordNumber, p2, null, response.SW2);
+                                        response = cardReader.Transmit(apdu);
+                                    }
+
+                                    if (response.SW1 == 0x61)
+                                    {
+                                        apdu = new APDUCommand(0x00, 0xC0, 0x00, 0x00, null, response.SW2);
+                                        response = cardReader.Transmit(apdu);
+                                    }
+
+                                    if (response.Data != null)
+                                    {
+                                        TreeNode recordNode = new TreeNode(String.Format("Record - {0:X2}", recordNumber));
+                                        recordNode.ImageIndex = 4;
+                                        recordNode.SelectedImageIndex = 4;
+                                        recordNode.Tag = recordNumber;
+                                        efDirNode.Nodes.Add(recordNode);
+
+                                        ASN1 aef = new ASN1(response.Data);
+                                        AddRecordNodes(aef, recordNode);
+
+                                        foreach (ASN1 appTemplate in aef)
+                                        {
+                                            // Check we really have an Application Template
+                                            if (appTemplate.Tag[0] == 0x61)
+                                            {
+                                                applicationIdentifiers.Add(appTemplate.Find(0x4f).Value);
+                                            }
+                                        }
+                                    }
+
+                                    recordNumber++;
                                 }
-
-                                if (response.SW1 == 0x61)
+                            } 
+                            else // ppse process
+                            {
+                                //ASN1 asn_a5 = new ASN1(response.Data).Find(0xA5);
+                                // for PPSE
+                                ASN1 asn_bf0c = new ASN1(response.Data).Find(new byte[] { 0xBF, 0x0C });
+                                if (asn_bf0c != null)
                                 {
-                                    apdu = new APDUCommand(0x00, 0xC0, 0x00, 0x00, null, response.SW2);
-                                    response = cardReader.Transmit(apdu);
-                                }
-
-                                if (response.Data != null)
-                                {
-                                    TreeNode recordNode = new TreeNode(String.Format("Record - {0:X2}", recordNumber));
-                                    recordNode.ImageIndex = 4;
-                                    recordNode.SelectedImageIndex = 4;
-                                    recordNode.Tag = recordNumber;
-                                    efDirNode.Nodes.Add(recordNode);
-
-                                    ASN1 aef = new ASN1(response.Data);
-                                    AddRecordNodes(aef, recordNode);
-
-                                    foreach (ASN1 appTemplate in aef)
+                                    foreach (ASN1 appTemplate in asn_bf0c)
                                     {
                                         // Check we really have an Application Template
                                         if (appTemplate.Tag[0] == 0x61)
@@ -365,9 +410,9 @@ namespace CardBrowser
                                         }
                                     }
                                 }
-
-                                recordNumber++;
                             }
+
+                            
                         }
 
                         if (pseFound)
@@ -475,16 +520,31 @@ namespace CardBrowser
 
                             // find PDOL
                             ASN1 pdol = fci.Find(new byte[] { 0x9F, 0x38 });
-                            //byte sfi = 1;
-                            //if (asn != null)
-                            //{
-                            //    sfi = asn.Value[0];
-                            //}
+                            
 
                             // Get processing options (with empty PDOL)
                             //apdu = new APDUCommand(0x80, 0xA8, 0x00, 0x00, new byte[] { 0x83, 0x00 }, 0x02);
 
-                            apdu = new APDUCommand(0x80, 0xA8, 0x00, 0x00, new byte[] { 0x83, 0x02, 0x04, 0x10 }, 0x02);
+                            if (pdol == null)
+                            {
+                                apdu = new APDUCommand(0x80, 0xA8, 0x00, 0x00, new byte[] { 0x83, 0x00 }, 0x02);
+                            } 
+                            else
+                            {
+                                ICollection<Tl> dols = Dol.Parse(pdol.Value);
+                                sb = new StringBuilder();
+                                sb.Append("8300");
+                                foreach(Tl tl in dols)
+                                {
+                                    SetPredefinedValue(tl);
+                                    sb.Append(tl.Value);
+                                }
+                                byte[] bPdol = Hex.ToBytes(sb.ToString());
+                                bPdol[1] = (byte)(bPdol.Length - 2);
+
+                                apdu = new APDUCommand(0x80, 0xA8, 0x00, 0x00, bPdol, (byte)bPdol.Length);
+                            }
+                            
                             response = cardReader.Transmit(apdu);
 
                             // Get response nescesary

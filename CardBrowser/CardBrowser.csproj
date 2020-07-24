@@ -90,6 +90,7 @@
       <DependentUpon>AboutBox.cs</DependentUpon>
     </Compile>
     <Compile Include="ApplicationFileLocator.cs" />
+    <Compile Include="Tl.cs" />
     <Compile Include="Helpers.cs" />
     <Compile Include="MainForm.cs">
       <SubType>Form</SubType>
@@ -162,6 +163,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="emv.ico" />
+    <EmbeddedResource Include="PredefinedDataList.xml" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
