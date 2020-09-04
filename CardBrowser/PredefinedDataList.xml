@@ -53,8 +53,8 @@
   <Tag Tag="9F23" Description="Upper Consecutive Offline Limit (EMV Generic)"/>
   <Tag Tag="9F59" Description="Upper Consecutive Offline Limit (Proprietary)"/>
   <Tag Tag="9F01" Description="Acquirer Identifier"/>
-  <Tag Tag="9F40" Description="Additional Terminal Capabilities"/>
-  <Tag Tag="81" Description="Amount, Authorised (Binary)"/>
+  <Tag Tag="9F40" Description="Additional Terminal Capabilities" value="0000000000"/>
+  <Tag Tag="81" Description="Amount, Authorised (Binary)" Value="01"/>
   <Tag Tag="9F02" Description="Amount, Authorized (Numeric)"/>
   <Tag Tag="9F04" Description="Amount, Other (Binary)"/>
   <Tag Tag="9F03" Description="Amount, Other (Numeric)"/>
